@@ -88,18 +88,26 @@ void VideoMaterial::bindPlanes()
     std::shared_ptr<const VlcYUVVideoFrame> tmpFrame;
     _frame.swap(tmpFrame);
 
+    GLenum format = GL_LUMINANCE;
+
+#if QT_VERSION >= 0x050300
+    if (QOpenGLContext::currentContext()->format().profile() == QSurfaceFormat::CoreProfile) {
+        format = GL_RED;
+    }
+#endif
+
     if (tmpFrame) {
         Q_ASSERT((tmpFrame->width & 1) == 0 && (tmpFrame->height & 1) == 0); // width and height should be even
         const quint16 tw = tmpFrame->width;
         const quint16 th = tmpFrame->height;
 
-        bindPlane(GL_TEXTURE1, _planeTexIds[1], tmpFrame->planes[1], tw / 2, th / 2);
-        bindPlane(GL_TEXTURE2, _planeTexIds[2], tmpFrame->planes[2], tw / 2, th / 2);
-        bindPlane(GL_TEXTURE0, _planeTexIds[0], tmpFrame->planes[0], tw, th);
+        bindPlane(GL_TEXTURE1, _planeTexIds[1], tmpFrame->planes[1], tw / 2, th / 2, format);
+        bindPlane(GL_TEXTURE2, _planeTexIds[2], tmpFrame->planes[2], tw / 2, th / 2, format);
+        bindPlane(GL_TEXTURE0, _planeTexIds[0], tmpFrame->planes[0], tw, th, format);
     } else {
-        bindPlane(GL_TEXTURE1, _planeTexIds[1], 0, 0, 0);
-        bindPlane(GL_TEXTURE2, _planeTexIds[2], 0, 0, 0);
-        bindPlane(GL_TEXTURE0, _planeTexIds[0], 0, 0, 0);
+        bindPlane(GL_TEXTURE1, _planeTexIds[1], 0, 0, 0, format);
+        bindPlane(GL_TEXTURE2, _planeTexIds[2], 0, 0, 0, format);
+        bindPlane(GL_TEXTURE0, _planeTexIds[0], 0, 0, 0, format);
     }
 }
 
@@ -107,14 +115,15 @@ void VideoMaterial::bindPlane(GLenum texUnit,
                               GLuint texId,
                               const void *plane,
                               quint16 width,
-                              quint16 height)
+                              quint16 height,
+                              GLenum format)
 {
     _glF->glActiveTexture(texUnit);
     _glF->glBindTexture(GL_TEXTURE_2D, texId);
     if (plane) {
-        _glF->glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE,
+        _glF->glTexImage2D(GL_TEXTURE_2D, 0, format,
                            width, height, 0,
-                           GL_LUMINANCE, GL_UNSIGNED_BYTE, plane);
+                           format, GL_UNSIGNED_BYTE, plane);
         _glF->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         _glF->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         _glF->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);

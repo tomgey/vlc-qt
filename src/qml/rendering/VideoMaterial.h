@@ -57,7 +57,8 @@ private:
                    GLuint texId,
                    const void *plane,
                    quint16 width,
-                   quint16 height);
+                   quint16 height,
+                   GLenum format);
 
 private:
 #if QT_VERSION < 0x050300

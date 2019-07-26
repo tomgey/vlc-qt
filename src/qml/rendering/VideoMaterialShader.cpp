@@ -23,6 +23,15 @@
 #include "rendering/VideoMaterial.h"
 #include "rendering/VideoMaterialShader.h"
 
+namespace
+{
+    bool isCoreProfile()
+    {
+        return QOpenGLContext::currentContext()->format().profile()
+                 == QSurfaceFormat::CoreProfile;
+    }
+}
+
 char const *const *VideoMaterialShader::attributeNames() const
 {
     static const char *names[] = {
@@ -34,7 +43,18 @@ char const *const *VideoMaterialShader::attributeNames() const
 
 const char *VideoMaterialShader::vertexShader() const
 {
-    return "attribute highp vec4 targetVertex;"
+    return isCoreProfile()
+         ? "#version 400 core\n"
+           "in vec4 targetVertex;"
+           "in vec2 textureCoordinates;"
+           "uniform mat4 positionMatrix;"
+           "out vec2 textureCoord;"
+           "void main(void)"
+           "{"
+           "    gl_Position = positionMatrix * targetVertex;"
+           "    textureCoord = textureCoordinates;"
+           "}"
+         : "attribute highp vec4 targetVertex;"
            "attribute highp vec2 textureCoordinates;"
            "uniform highp mat4 positionMatrix;"
            "varying highp vec2 textureCoord;"
@@ -47,20 +67,22 @@ const char *VideoMaterialShader::vertexShader() const
 
 const char *VideoMaterialShader::fragmentShader() const
 {
-    return "uniform sampler2D texY;"
+    return "#version 400 core\n"
+           "uniform sampler2D texY;"
            "uniform sampler2D texU;"
            "uniform sampler2D texV;"
-           "uniform mediump mat4 colorMatrix;"
-           "varying highp vec2 textureCoord;"
+           "uniform mat4 colorMatrix;"
+           "in vec2 textureCoord;"
            "uniform lowp float opacity;"
+           "out vec4 fragColor;"
            "void main(void)"
            "{"
-           "    highp vec4 color = vec4("
+           "    vec4 color = vec4("
            "           texture2D(texY, textureCoord.st).r,"
            "           texture2D(texU, textureCoord.st).r,"
            "           texture2D(texV, textureCoord.st).r,"
            "           1.0);"
-           "    gl_FragColor = colorMatrix * color * opacity;"
+           "    fragColor = colorMatrix * color * opacity;"
            "}";
 }
 
